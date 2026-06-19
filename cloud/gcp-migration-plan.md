@@ -78,6 +78,36 @@ el caballo de batalla es **GKE Sandbox**, no Cloud Run. Dos tiers, ambos sobre l
   los datos son idénticos, así que la promoción free→pro es mover el volumen, no
   migrar datos.
 
+#### El tier de prueba (Free) abarata el costo FIJO, no solo el por-equipo
+El por-equipo del free ya es ~$0 (scale-to-zero). Lo caro es el costo fijo
+compartido (~$186/mes), inflado por GKE ($73), Cloud NAT ($33) y Cloud SQL ($35)
+— **infra que el free no necesita**. La ruta del tier de prueba evita las tres:
+
+| Pieza | Pro / pago | Prueba / free |
+|---|---|---|
+| Sustrato | GKE Sandbox (24/7) | **Cloud Run gVisor** (scale-to-zero) |
+| DB metadata | Cloud SQL | **Supabase** (ya existe, $0 incremental) |
+| Egress | Cloud NAT + allowlist | egress gestionado de Cloud Run (sin NAT) |
+| Storage | bucket/volumen por equipo (+ Filestore opt-in) | **1 bucket GCS compartido, prefijo + IAM por equipo** |
+| Cluster fee | GKE $73/mes | $0 (no hay cluster) |
+
+→ **Fijo del tier de prueba ≈ $15–35/mes**, casi independiente del nº de equipos
+(escalan a cero). Uso ligero puede caer en la **cuota always-free de Cloud Run**
+(2M req, 360k vCPU-s/mes) = **$0 de cómputo real**.
+
+Controles para que el free no se dispare: cap de 1–2 agentes, **sin scheduler 24/7**
+(es feature de Pro), minutos de sesión limitados, hibernación + **TTL de datos**
+(borrar datos de free dormido tras 30–60 días, avisando).
+
+**Importante:** el tier de prueba **conserva el sandbox de kernel** (gVisor de
+Cloud Run). No bajamos la garantía de aislamiento para ahorrar; solo quitamos
+infra fija que el free no usa.
+
+> Palanca extra (no recomendada salvo necesidad): un **engine único compartido**
+> para free con separación lógica (OS-user/cgroups) sería aún más barato a alta
+> concurrencia, pero **pierde la frontera de kernel** entre equipos free. Solo si
+> los datos de prueba fueran desechables. Documentada, no elegida.
+
 > Por qué esto cumple lo que pediste: gVisor/microVM = frontera de **kernel** sin
 > una VM dedicada por cliente; bin-packing/scale-to-zero sobre nodos compartidos
 > = económico; un sandbox por equipo = **no es separación por prompt**.
@@ -235,10 +265,14 @@ que el costo se controla distinto en cada tier:
   consume casi nada. VPA para afinar.
 - El precio del tier Pro debe cubrir: nodo prorrateado + storage + markup de API.
 
-**Tier Free (Cloud Run on-demand) — barato por diseño:**
+**Tier de prueba / Free (Cloud Run on-demand) — barato por diseño:**
 - **Scale-to-zero**: team free inactivo = $0 cómputo (cold start de segundos,
   aceptable porque no corre routines persistentes).
 - **BYO key**: el costo de API no es nuestro.
+- **Costo fijo recortado**: su ruta no usa GKE/NAT/Cloud SQL → el fijo del tier de
+  prueba es **~$15–35/mes** (control plane Cloud Run + Supabase + bucket
+  compartido), casi independiente del nº de equipos. Uso ligero entra en la cuota
+  always-free de Cloud Run = $0 cómputo. Mantiene el sandbox gVisor.
 
 **Transversal:**
 - **Control plane compartido** (no por tenant): costo fijo pequeño.

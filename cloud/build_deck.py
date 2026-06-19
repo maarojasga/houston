@@ -240,22 +240,23 @@ card(s, 8.6, 4.3, 3.95, 2.3, "TRANSVERSAL", "Plataforma",
 
 # ============================================================== 7. TENANCY/TIERS
 s = slide()
-header(s, "MODELO", "Dos tiers, misma imagen")
+header(s, "MODELO", "Dos tiers: prueba (barato) y pago (fuerte)")
 rows = [
-    ["", "Free / Lite", "Pro / Always On"],
+    ["", "Prueba / Free", "Pago / Pro"],
     ["Sustrato", "Cloud Run gen2", "GKE + GKE Sandbox"],
-    ["Ejecución", "On-demand, scale-to-zero", "24/7 (routines), min 1 réplica"],
-    ["Aislamiento", "microVM + gVisor", "pod gVisor + namespace"],
+    ["Ejecución", "On-demand, scale-to-zero", "24/7 routines, min 1 réplica"],
+    ["Aislamiento", "microVM + gVisor (¡se conserva!)", "pod gVisor + namespace"],
     ["Billing API", "BYO key (la trae el team)", "Central con markup + cuotas"],
-    ["Costo p/ nosotros", "~$0 idle, centavos activo", "~$5–8 / equipo / mes (infra)"],
+    ["Infra fija que usa", "Solo Cloud Run + Supabase", "GKE + NAT + Cloud SQL"],
+    ["Costo p/ nosotros", "~$0 idle · fijo ~$22/mes", "~$5–8 /equipo · fijo ~$186"],
 ]
-table(s, 0.8, 2.1, 11.75, rows, [2.4, 4.2, 4.6], header_fill=BLUE, row_h=0.6)
-box(s, 0.8, 6.05, 11.75, 0.95, fill=PANEL)
-box(s, 0.8, 6.05, 0.1, 0.95, fill=AMBER)
-text(s, 1.1, 6.18, 11.2, 0.8,
-     [[("Promoción free → pro  ", 13.5, AMBER, True),
-       ("= mover el volumen entre sustratos. Mismo binario, mismo HOUSTON_HOME, "
-        "sin migrar datos.", 13.5, INK, False)]])
+table(s, 0.8, 1.95, 11.75, rows, [2.6, 4.4, 4.4], header_fill=BLUE, row_h=0.55)
+box(s, 0.8, 6.2, 11.75, 0.85, fill=PANEL)
+box(s, 0.8, 6.2, 0.1, 0.85, fill=AMBER)
+text(s, 1.1, 6.3, 11.2, 0.7,
+     [[("Clave del ahorro  ", 13, AMBER, True),
+       ("— el tier de prueba quita GKE/NAT/Cloud SQL pero MANTIENE el sandbox de "
+        "kernel. Promoción free→pro = mover el volumen, sin migrar datos.", 13, INK, False)]])
 
 # ============================================================== 8. SEGURIDAD
 s = slide()
@@ -284,18 +285,19 @@ header(s, "COSTOS", "Estimación — supuestos")
 text(s, 0.8, 1.85, 11.8, 0.5,
      [[("Orden de magnitud, región us-central1, USD/mes. Infra propia; el costo de "
         "API LLM va aparte (ver nota).", 13.5, MUTE, False)]])
-text(s, 0.8, 2.5, 5.9, 0.4, [[("Fijo / compartido (control plane)", 15, AMBER, True)]])
+text(s, 0.8, 2.5, 5.9, 0.4, [[("Fijo / compartido — Pago vs Prueba", 15, AMBER, True)]])
 rows = [
-    ["Concepto", "USD/mes"],
-    ["GKE cluster management fee", "$73"],
-    ["Cloud SQL (control plane)", "$35"],
-    ["Gateway + control plane (Cloud Run)", "$20"],
-    ["Cloud NAT", "$33"],
-    ["Logging / Monitoring / Audit", "$20"],
-    ["Secret Manager + misc", "$5"],
-    ["TOTAL FIJO", "≈ $186"],
+    ["Concepto", "Pago", "Prueba"],
+    ["GKE cluster fee", "$73", "—"],
+    ["Cloud SQL (control plane)", "$35", "—"],
+    ["Cloud NAT", "$33", "—"],
+    ["Gateway + control plane (CR)", "$20", "$15"],
+    ["Supabase (metadata)", "incl.", "$0*"],
+    ["Logging / Monitoring", "$20", "$5"],
+    ["Secret Manager + misc", "$5", "$2"],
+    ["TOTAL FIJO", "≈ $186", "≈ $22"],
 ]
-table(s, 0.8, 2.95, 5.9, rows, [4.2, 1.4], header_fill=BLUE, row_h=0.41, head_h=0.43, font=11)
+table(s, 0.8, 2.95, 5.9, rows, [3.4, 1.25, 1.25], header_fill=BLUE, row_h=0.36, head_h=0.4, font=10.5)
 text(s, 7.0, 2.5, 5.5, 0.4, [[("Variable por equipo (infra, sin API)", 15, AMBER, True)]])
 rows2 = [
     ["Concepto", "Pro 24/7", "Free"],
@@ -311,22 +313,24 @@ text(s, 7.2, 6.05, 5.2, 1.0,
      [[("API LLM:  ", 12, AMBER, True),
        ("Free = BYO (costo $0 para nosotros).  Pro = pass-through + markup → "
         "ingreso positivo, no costo neto.", 12, MUTE, False)]], space=4)
-box(s, 0.8, 6.5, 5.9, 0.6, fill=PANEL)
-text(s, 1.0, 6.58, 5.6, 0.5,
-     [[("Filestore (caro) solo opt-in.  ", 11.5, RED, True),
-       ("Default = GCS+gcsfuse.", 11.5, MUTE, False)]])
+box(s, 0.8, 6.45, 5.9, 0.65, fill=PANEL)
+text(s, 1.0, 6.52, 5.6, 0.55,
+     [[("* ", 10.5, AMBER, True),
+       ("Uso ligero de prueba cae en la cuota always-free de Cloud Run = $0 cómputo. "
+        "Filestore (caro) solo opt-in en Pago.", 10.5, MUTE, False)]])
 
 # ============================================================== 10. COSTOS escenarios
 s = slide()
 header(s, "COSTOS", "Escenarios y comparación")
 rows = [
     ["Escenario", "Fijo", "Variable", "Total infra/mes", "Por equipo"],
-    ["50 equipos Pro", "$186", "50 × $7 = $350", "≈ $536", "≈ $10.7"],
-    ["200 equipos Pro", "$186", "200 × $6 = $1,200", "≈ $1,386", "≈ $6.9"],
-    ["100 Pro + 400 Free", "$186", "$700 + $400", "≈ $1,286", "≈ $2.6"],
-    ["500 equipos Pro", "$186", "500 × $5.5 = $2,750", "≈ $2,936", "≈ $5.9"],
+    ["Solo prueba: 2,000 free (BYO)", "$22", "~$0 idle", "≈ $22–100", "≈ $0.02"],
+    ["50 equipos Pago", "$186", "50 × $7 = $350", "≈ $536", "≈ $10.7"],
+    ["200 equipos Pago", "$186", "200 × $6 = $1,200", "≈ $1,386", "≈ $6.9"],
+    ["100 Pago + 400 prueba", "$186", "$700 + ~$0", "≈ $886", "≈ $1.8"],
+    ["500 equipos Pago", "$186", "500 × $5.5 = $2,750", "≈ $2,936", "≈ $5.9"],
 ]
-table(s, 0.8, 2.1, 11.75, rows, [2.9, 1.3, 2.7, 2.4, 1.6], header_fill=BLUE, row_h=0.52)
+table(s, 0.8, 2.05, 11.75, rows, [3.1, 1.2, 2.6, 2.4, 1.5], header_fill=BLUE, row_h=0.5)
 text(s, 0.8, 5.0, 11.8, 0.4,
      [[("Vs. el modelo que rechazamos (1 VPS dedicada por equipo):", 14, AMBER, True)]])
 bullets(s, 0.9, 5.45, 11.6, [
